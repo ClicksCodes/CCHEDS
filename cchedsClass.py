@@ -91,8 +91,10 @@ class CCHEDS:
             rows[y] += int(self.encode_3s[i], 2)
         rows = [i % 4096 for i in rows]
         cols = [i % 4096 for i in cols]
+        print(cols)
         self.error_correction[0] = [oct(i)[2:].zfill(4) for i in rows]
         self.error_correction[1] = [oct(i)[2:].zfill(4) for i in cols]
+        print(self.error_correction[1])
         return self
 
     def encode_to_letters(self):
