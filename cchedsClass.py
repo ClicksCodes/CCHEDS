@@ -52,12 +52,13 @@ def next_perfect_square(n):
 class CCHEDS:
     text = ""
     error_correction_raw = []
-    error_correction_3s = [[],[]]
     error_correction = [[],[]]
+    encoded_error_correction = []
     encoded = []
     encode_3s = []
     size = 0
     parity_color = (0, 0, 0)
+    raw_image = None
 
     def __init__(self, text):
         self.text = text
@@ -76,13 +77,29 @@ class CCHEDS:
         return self
 
     def get_error_correction(self):
-        # print(self.error_correction_raw)
+        rows = []
+        cols = []
+        for i in range(len(self.encode_3s)):
+            x = i % self.size
+            if len(cols) <= x:
+                cols.append(0)
+            cols[x] += int(self.encode_3s[i], 2)
+
+            y = i // self.size
+            if len(rows) <= y:
+                rows.append(0)
+            rows[y] += int(self.encode_3s[i], 2)
+        rows = [i % 4096 for i in rows]
+        cols = [i % 4096 for i in cols]
+        self.error_correction[0] = [oct(i)[2:].zfill(4) for i in rows]
+        self.error_correction[1] = [oct(i)[2:].zfill(4) for i in cols]
         return self
 
     def encode_to_letters(self):
         self.encoded = [colors[int(i, 2)] for i in self.encode_3s]
-        # self.error_correction[0] = [colors[int(i)] for i in self.error_correction_3s[0]]
-        # self.error_correction[1] = [colors[int(i)] for i in self.error_correction_3s[1]]
+        self.error_correction[0] = [[colors[int(j, 8)] for j in i[::-1]] for i in self.error_correction[0]]
+        self.error_correction[1] = [[colors[int(j, 8)] for j in i[::-1]] for i in self.error_correction[1]]
+        self.parity_color = letter_to_rgb[colors[sum(letters_to_int[i] for i in self.encoded) % 8]]
         return self
 
     def encode(self):
@@ -92,7 +109,7 @@ class CCHEDS:
         return self
 
 
-    def to_image(self, save=False):
+    def to_image(self):
         size = self.size
         img = Image.new("RGB", (size + 4, size + 4), (0, 0, 0))
 
@@ -124,15 +141,45 @@ class CCHEDS:
         img.putpixel((size + 3, size + 2), (255, 255, 255))
         img.putpixel((size + 2, size + 2), (255, 255, 0))
 
+        # Data
         for i in range(len(self.encoded)):
             x = i % size
             y = i // size
             img.putpixel((x + 2, y + 2), letter_to_rgb[self.encoded[i]])
 
-        img.resize((size * 10, size * 10), Image.Resampling.BOX).show()
+        # Error Correction
+        for i in range(len(self.error_correction[0])):
+            y = i % size
+            img.putpixel((0, y + 2), letter_to_rgb[self.error_correction[0][i][0]])
+            img.putpixel((1, y + 2), letter_to_rgb[self.error_correction[0][i][1]])
+            img.putpixel((size + 2, y + 2), letter_to_rgb[self.error_correction[0][i][2]])
+            img.putpixel((size + 3, y + 2), letter_to_rgb[self.error_correction[0][i][3]])
+
+        for i in range(len(self.error_correction[1])):
+            x = i % size
+            img.putpixel((x + 2, 0), letter_to_rgb[self.error_correction[1][i][0]])
+            img.putpixel((x + 2, 1), letter_to_rgb[self.error_correction[1][i][1]])
+            img.putpixel((x + 2, size + 2), letter_to_rgb[self.error_correction[1][i][2]])
+            img.putpixel((x + 2, size + 3), letter_to_rgb[self.error_correction[1][i][3]])
+
+        self.raw_image = img
+        return self
+
+    def resize(self, size):
+        img = Image.new("RGB", (size, size), (0, 0, 0))
+        img.paste(self.raw_image.resize((size, size), Image.NEAREST), (0, 0))
+        return img
+
+    def save(self, path, size=256):
+        self.resize(size).save(path)
+        return self
+
+    def show(self, size=256):
+        self.resize(size).show()
+        return self
 
 
 if __name__ == "__main__":
-    c = CCHEDS("Hello World")
+    c = CCHEDS("CCHEDS")
     c.encode()
-    c.to_image()
+    c.to_image().show()
