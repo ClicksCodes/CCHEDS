@@ -1,8 +1,6 @@
 from PIL import Image
 import base64 as b64
 from math import sqrt, ceil
-from consolemenu import *
-from consolemenu.items import *
 
 VERSION=0
 
@@ -169,6 +167,8 @@ class CCHEDS:
         return self
 
     def resize(self, size):
+        if not self.raw_image:
+            self.to_image()
         img = Image.new("RGB", (size, size), (0, 0, 0))
         img.paste(self.raw_image.resize((size, size), Image.NEAREST), (0, 0))
         return img
@@ -181,17 +181,12 @@ class CCHEDS:
         self.resize(size).show()
         return self
 
-    def set_text(self, text):
-        self.text = text
+    def set_text(self):
+        self.text = input("Text: ")
+        self.encode()
         return self
-
-c = CCHEDS()
-menu = ConsoleMenu("CCHEDS", "ClickCode High Efficiency Data Storage CLI")
-menu.append_item(FunctionItem("Set Text", c.set_text, ["Text"]))
-menu.append_item(FunctionItem("Encode", c.encode))
-menu.append_item(FunctionItem("Save", c.save, ["Path", "Size"]))
-menu.append_item(FunctionItem("Show", c.show, ["Size"]))
 
 
 if __name__ == "__main__":
-    menu.show()
+    c = CCHEDS()
+    c.set_text().show()
