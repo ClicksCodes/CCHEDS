@@ -181,8 +181,11 @@ class CCHEDS:
         self.resize(size).show()
         return self
 
-    def set_text(self):
-        self.text = input("Text: ")
+    def set_text(self, Text=None):
+        if not Text:
+            self.text = input("Text: ")
+        else:
+            self.text = Text
         self.encode()
         return self
 
