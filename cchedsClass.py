@@ -1,6 +1,8 @@
 from PIL import Image
 import base64 as b64
 from math import sqrt, ceil
+from consolemenu import *
+from consolemenu.items import *
 
 VERSION=0
 
@@ -25,7 +27,6 @@ letter_to_rgb = {
     "Y": (255, 255, 0),
     "W": (255, 255, 255),
 }
-
 
 def split(bytes, number):
     l = []
@@ -60,7 +61,7 @@ class CCHEDS:
     parity_color = (0, 0, 0)
     raw_image = None
 
-    def __init__(self, text):
+    def __init__(self, text=None):
         self.text = text
 
     def encode_to_3s(self, string):
@@ -180,8 +181,17 @@ class CCHEDS:
         self.resize(size).show()
         return self
 
+    def set_text(self, text):
+        self.text = text
+        return self
+
+c = CCHEDS()
+menu = ConsoleMenu("CCHEDS", "ClickCode High Efficiency Data Storage CLI")
+menu.append_item(FunctionItem("Set Text", c.set_text, ["Text"]))
+menu.append_item(FunctionItem("Encode", c.encode))
+menu.append_item(FunctionItem("Save", c.save, ["Path", "Size"]))
+menu.append_item(FunctionItem("Show", c.show, ["Size"]))
+
 
 if __name__ == "__main__":
-    c = CCHEDS("CCHEDS")
-    c.encode()
-    c.to_image().show()
+    menu.show()
