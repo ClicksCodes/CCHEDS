@@ -4,39 +4,12 @@ from math import sqrt, ceil
 
 VERSION=0
 
-colors = {
-    "000": "K",
-    "001": "B",
-    "010": "G",
-    "011": "C",
-    "100": "R",
-    "101": "M",
-    "110": "Y",
-    "111": "W",
-}
+colors_arr = "KBGCRMYW"
 
-colors_arr = ["K", "B", "G", "C", "R", "M", "Y", "W"]
-bits_to_int = {
-    "K": 0,
-    "B": 1,
-    "G": 2,
-    "C": 3,
-    "R": 4,
-    "M": 5,
-    "Y": 6,
-    "W": 7,
-}
-
-letter_to_rgb = {
-    "K": (0, 0, 0),
-    "B": (0, 0, 255),
-    "G": (0, 255, 0),
-    "C": (0, 255, 255),
-    "R": (255, 0, 0),
-    "M": (255, 0, 255),
-    "Y": (255, 255, 0),
-    "W": (255, 255, 255),
-}
+def letter_to_rgb(letter):
+    index = colors_arr.index(letter)
+    i = bin(index)[2:].zfill(3)
+    return [255 if int(n) else 0 for n in i]
 
 def next_perfect_square(n):
     return ceil(sqrt(n))
@@ -72,7 +45,7 @@ def encode_to_3s(data):
     return s
 
 def encode_to_letters(data):
-    return [colors[i] for i in data]
+    return [bin(i)[2:].zfill(3) for i in data]
 
 def decode_from_string(data):
     s = "".join(data)
@@ -94,10 +67,9 @@ def decode_from_letters(string_arr):
     return s
 
 def get_error_correction(data):
-    size = next_perfect_square(len(data))
     i = 0
     for l in data:
-        i += bits_to_int[l]
+        i += colors_arr.index(l)
     return data
 
 def to_image(data, final_size=(256,256)):
@@ -106,8 +78,8 @@ def to_image(data, final_size=(256,256)):
 
     octal = int(oct(VERSION)[2:])
     version_colors = [
-        letter_to_rgb[colors_arr[octal & 0b111]],
-        letter_to_rgb[colors_arr[(octal >> 3) & 0b111]],
+        letter_to_rgb(colors_arr[octal & 0b111]),
+        letter_to_rgb(colors_arr[(octal >> 3) & 0b111]),
     ]
     parity_color = (0, 0, 0)
     # Top Left Align
@@ -135,7 +107,7 @@ def to_image(data, final_size=(256,256)):
     for i in range(len(data)):
         x = i % size
         y = i // size
-        img.putpixel((x + 2, y + 2), letter_to_rgb[data[i]])
+        img.putpixel((x + 2, y + 2), letter_to_rgb(data[i]))
 
     # Error Correction
     # for i in range(len(data.error_correction)):

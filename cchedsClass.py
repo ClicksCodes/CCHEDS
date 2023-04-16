@@ -4,27 +4,12 @@ from math import sqrt, ceil
 
 VERSION=0
 
-colors = ["K", "B", "G", "C", "R", "M", "Y", "W"]
-letters_to_int = {
-    "K": 0,
-    "B": 1,
-    "G": 2,
-    "C": 3,
-    "R": 4,
-    "M": 5,
-    "Y": 6,
-    "W": 7
-}
-letter_to_rgb = {
-    "K": (0, 0, 0),
-    "B": (0, 0, 255),
-    "G": (0, 255, 0),
-    "C": (0, 255, 255),
-    "R": (255, 0, 0),
-    "M": (255, 0, 255),
-    "Y": (255, 255, 0),
-    "W": (255, 255, 255),
-}
+colors = "KBGCRMYW"
+
+def letter_to_rgb(letter):
+    index = colors.index(letter)
+    i = bin(index)[2:].zfill(3)
+    return tuple([255 if int(n) else 0 for n in i])
 
 def split(bytes, number):
     l = []
@@ -100,7 +85,7 @@ class CCHEDS:
         self.encoded = [colors[int(i, 2)] for i in self.encode_3s]
         self.error_correction[0] = [[colors[int(j, 8)] for j in i[::-1]] for i in self.error_correction[0]]
         self.error_correction[1] = [[colors[int(j, 8)] for j in i[::-1]] for i in self.error_correction[1]]
-        self.parity_color = letter_to_rgb[colors[sum(letters_to_int[i] for i in self.encoded) % 8]]
+        self.parity_color = letter_to_rgb(colors[sum(colors.index(i) for i in self.encoded) % 8])
         return self
 
     def encode(self):
@@ -117,8 +102,8 @@ class CCHEDS:
         # Version Colors
         octal = int(oct(VERSION)[2:])
         version_colors = [
-            letter_to_rgb[colors[octal & 0b111]],
-            letter_to_rgb[colors[(octal >> 3) & 0b111]],
+            letter_to_rgb(colors[octal & 0b111]),
+            letter_to_rgb(colors[(octal >> 3) & 0b111]),
         ]
 
         # Top Left Align
@@ -146,39 +131,40 @@ class CCHEDS:
         for i in range(len(self.encoded)):
             x = i % size
             y = i // size
-            img.putpixel((x + 2, y + 2), letter_to_rgb[self.encoded[i]])
+            img.putpixel((x + 2, y + 2), letter_to_rgb(self.encoded[i]))
 
         # Error Correction
         for i in range(len(self.error_correction[0])):
             y = i % size
-            img.putpixel((0, y + 2), letter_to_rgb[self.error_correction[0][i][0]])
-            img.putpixel((1, y + 2), letter_to_rgb[self.error_correction[0][i][1]])
-            img.putpixel((size + 2, y + 2), letter_to_rgb[self.error_correction[0][i][2]])
-            img.putpixel((size + 3, y + 2), letter_to_rgb[self.error_correction[0][i][3]])
+            img.putpixel((0, y + 2), letter_to_rgb(self.error_correction[0][i][0]))
+            img.putpixel((1, y + 2), letter_to_rgb(self.error_correction[0][i][1]))
+            img.putpixel((size + 2, y + 2), letter_to_rgb(self.error_correction[0][i][2]))
+            img.putpixel((size + 3, y + 2), letter_to_rgb(self.error_correction[0][i][3]))
 
         for i in range(len(self.error_correction[1])):
             x = i % size
-            img.putpixel((x + 2, 0), letter_to_rgb[self.error_correction[1][i][0]])
-            img.putpixel((x + 2, 1), letter_to_rgb[self.error_correction[1][i][1]])
-            img.putpixel((x + 2, size + 2), letter_to_rgb[self.error_correction[1][i][2]])
-            img.putpixel((x + 2, size + 3), letter_to_rgb[self.error_correction[1][i][3]])
+            img.putpixel((x + 2, 0), letter_to_rgb(self.error_correction[1][i][0]))
+            img.putpixel((x + 2, 1), letter_to_rgb(self.error_correction[1][i][1]))
+            img.putpixel((x + 2, size + 2), letter_to_rgb(self.error_correction[1][i][2]))
+            img.putpixel((x + 2, size + 3), letter_to_rgb(self.error_correction[1][i][3]))
 
         self.raw_image = img
         return self
 
-    def resize(self, size):
+    def _resize(self, block_size):
         if not self.raw_image:
             self.to_image()
+        size = (self.size + 4) * block_size
         img = Image.new("RGB", (size, size), (0, 0, 0))
         img.paste(self.raw_image.resize((size, size), Image.NEAREST), (0, 0))
         return img
 
-    def save(self, path, size=256):
-        self.resize(size).save(path)
+    def save(self, path, block_size=16):
+        self._resize(block_size).save(path)
         return self
 
-    def show(self, size=256):
-        self.resize(size).show()
+    def show(self, block_size=16):
+        self._resize(block_size).show()
         return self
 
     def set_text(self, Text=None):
@@ -192,4 +178,4 @@ class CCHEDS:
 
 if __name__ == "__main__":
     c = CCHEDS()
-    c.set_text().show()
+    c.set_text().show(64)
