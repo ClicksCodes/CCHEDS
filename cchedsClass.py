@@ -115,8 +115,8 @@ class CCHEDS:
         # Version Colors
         octal = int(oct(VERSION)[2:])
         version_colors = [
-            letter_to_rgb(colors[octal & 0b111]),
-            letter_to_rgb(colors[(octal >> 3) & 0b111]),
+            self.letter_to_rgb(self.colors[octal & 0b111]),
+            self.letter_to_rgb(self.colors[(octal >> 3) & 0b111]),
         ]
 
         # Top Left Align
