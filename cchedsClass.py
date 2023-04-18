@@ -3,6 +3,7 @@ import base64 as b64
 from math import ceil
 import xxhash as xxh
 import os
+import time
 
 VERSION=1
 
@@ -203,15 +204,21 @@ class CCHEDS:
         size = ((self.size[0] + 4) * block_size, (self.size[1] + 4) * block_size)
         img = Image.new("RGB", size, (0, 0, 0))
         print("Pasting")
-        img.paste(self.raw_image.resize(size, Image.NEAREST), (0, 0))
+        img.paste(self.raw_image.resize(size, Image.Dither.NONE), (0, 0))
         return img
 
     def save(self, path, block_size=16):
-        self._resize(block_size).save(path)
+        start = time.time()
+        out = self._resize(block_size)
+        print(f"Finished in {time.time() - start:.2f} seconds")
+        out.save(path)
         return self
 
     def show(self, block_size=16):
-        self._resize(block_size).show()
+        start = time.time()
+        out = self._resize(block_size)
+        print(f"Finished in {time.time() - start:.2f} seconds")
+        out.show()
         return self
 
     def set_text(self, text=None):
