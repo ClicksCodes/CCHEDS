@@ -74,6 +74,7 @@ class CCHEDS:
 
     def _encode_to_3s(self, string, find_size=False):
         base64encoded = b64.b64encode(string)
+        print(base64encoded)
         l = []
         for char in base64encoded:
             c = bin(char)
