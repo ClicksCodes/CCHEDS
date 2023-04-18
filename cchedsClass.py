@@ -2,6 +2,7 @@ from PIL import Image
 import base64 as b64
 from math import ceil
 import xxhash as xxh
+import os
 
 VERSION=1
 
@@ -24,8 +25,12 @@ def split(bytes, number):
             l.append(s)
     return l
 
+def get_terminal_width():
+    return int(os.get_terminal_size().columns)
+
 def best_multiple(n):
-    print("Finding best multiple for: ", n)
+    print("Finding best multiple for:", n)
+    terminal_width = get_terminal_width()
     # Find all the factors of n
     factors = set()
     for width in range(1, n + 1):
@@ -33,10 +38,13 @@ def best_multiple(n):
         factors.add((max(width, min_height), min(width, min_height)))
     # Calculate ranks for each, lower is better
     ranks = {k: 1 for k in list(factors)}
-    for factor in ranks:
+    for i, factor in enumerate(ranks):
+        print("#" * int((i / len(ranks)) * terminal_width), end="\r")
         ranks[factor] *= ((factor[0] - factor[1]) ** 2) + 1
         ranks[factor] += (factor[0] * factor[1]) - n
-    all_with_lowest = [k for k, v in ranks.items() if v == min(ranks.values())]
+    print("Processed all factors ")
+    minimum = min(ranks.values())
+    all_with_lowest = [k for k, v in ranks.items() if v == minimum]
     return all_with_lowest[0]
 
 class CCHEDS:
@@ -60,10 +68,10 @@ class CCHEDS:
         elif type(colors) == dict:
             self.letter_to_rgb = lambda letter: colors[letter]
         else:
-            self.letter_to_rgb = lambda letter: tuple([255 if int(n) else 0 for n in bin(self.colors.index(letter))[2:].zfill(3)]) if letter != "P" else (128, 128, 128)
+            self.letter_to_rgb = lambda letter: tuple([255 if int(n) else 0 for n in bin(self.colors.index(letter))[2:].zfill(3)])
         self.text = text
 
-    def _encode_to_3s(self, string):
+    def _encode_to_3s(self, string, find_size=False):
         base64encoded = b64.b64encode(string)
         l = []
         for char in base64encoded:
@@ -71,7 +79,8 @@ class CCHEDS:
             l.append(c.replace("0b", "").zfill(8))
         t = ("".join(l))
         s = split(t, 3)
-        self.size = best_multiple(len(s))
+        if find_size:
+            self.size = best_multiple(len(s))
         return s
 
     def _get_error_correction(self):
@@ -104,7 +113,7 @@ class CCHEDS:
         hasher.update(self.text)
         hasher = hasher.digest()
         self.hash_3s = self._encode_to_3s(hasher)
-        self.encode_3s = self._encode_to_3s(self.text)
+        self.encode_3s = self._encode_to_3s(self.text, True)
         self.error_correction_mod = self._get_error_correction()
         self._encode_to_letters()
         return self
@@ -144,24 +153,30 @@ class CCHEDS:
         size = self.size
         img = Image.new("RGB", (size[0] + 4, size[1] + 4), (0, 0, 0))
         img = self._add_meta(img)
+        terminal_width = get_terminal_width()
 
         # Data
         for i in range(len(self.encoded)):
             x = i % size[0]
             y = i // size[0]
-            # print(f"setting pixel {x+2},{y+2} to {self.encoded[i]}")
             img.putpixel((x + 2, y + 2), self.letter_to_rgb(self.encoded[i]))
+            print("#" * round((i / len(self.encoded)) * terminal_width), end="\r")
+        print("Added data ")
 
         # Error Correction Mod
         for i in range(len(self.error_correction_mod[0])):
             y = i % size[1]
             img.putpixel((0, y + 2), self.letter_to_rgb(self.error_correction_mod[0][i][0]))
             img.putpixel((1, y + 2), self.letter_to_rgb(self.error_correction_mod[0][i][1]))
+            print("#" * round((i / len(self.error_correction_mod[0])) * terminal_width), end="\r")
+        print("Added top error correction ")
 
         for i in range(len(self.error_correction_mod[1])):
             x = i % size[0]
             img.putpixel((x + 2, 0), self.letter_to_rgb(self.error_correction_mod[1][i][0]))
             img.putpixel((x + 2, 1), self.letter_to_rgb(self.error_correction_mod[1][i][1]))
+            print("#" * round((i / len(self.error_correction_mod[1])) * terminal_width), end="\r")
+        print("Added side error correction ")
 
         # Hash
         current_string = self.hash_encoded[:2*sum(self.size)]
@@ -169,11 +184,14 @@ class CCHEDS:
             x = self.size[0] + 2 + (pixel_index % 2)
             y = 2 + pixel_index // 2
             img.putpixel((x, y), self.letter_to_rgb(current_string[pixel_index]))
+            print("#" * round((pixel_index / len(current_string)) * terminal_width), end="\r")
         offset = len(current_string) // 2
         for pixel_index in range(offset, len(current_string)):
             x = (pixel_index % self.size[0]) + 2
             y = self.size[1] + 2 + ((pixel_index - offset) // self.size[0])
             img.putpixel((x, y), self.letter_to_rgb(current_string[pixel_index]))
+            print("#" * round((pixel_index / len(current_string)) * terminal_width), end="\r")
+        print("Added hash ")
 
         self.raw_image = img
         return self
@@ -181,8 +199,10 @@ class CCHEDS:
     def _resize(self, block_size):
         if not self.raw_image:
             self._to_image()
+        print("Resizing")
         size = ((self.size[0] + 4) * block_size, (self.size[1] + 4) * block_size)
         img = Image.new("RGB", size, (0, 0, 0))
+        print("Pasting")
         img.paste(self.raw_image.resize(size, Image.NEAREST), (0, 0))
         return img
 
@@ -196,7 +216,11 @@ class CCHEDS:
 
     def set_text(self, text=None):
         if not text:
-            self.text = bytes(input("Text: "), "utf-8")
+            action = input("[T]ext or [F]ile: ")
+            if action.lower() == "f":
+                self.text = bytes(open(input("Filename: ")).read(), "utf-8")
+            else:
+                self.text = bytes(input("Text: "), "utf-8")
         else:
             self.text = bytes(text, "utf-8")
         self.encode()
