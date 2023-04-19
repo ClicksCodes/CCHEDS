@@ -77,7 +77,7 @@ class CCHEDS:
             hasher.update(self.text)
             self.hash_bytes = hasher.digest()
             self.hash_bytes = b64.b64encode(self.hash_bytes)
-        self.hash_bytes = "".join([bin(n)[2:].zfill(8) for n in self.text])
+        self.hash_bytes = "".join([bin(n)[2:].zfill(8) for n in self.hash_bytes])
         # Encode the data through base64
         self.text = b64.b64encode(self.text)
         # Then convert it to 3 bit binary

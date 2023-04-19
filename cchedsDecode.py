@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import base64 as b64
+import xxhash as xxh
 
 
 def render(arr: list[str]) -> None:
@@ -21,6 +22,24 @@ def render(arr: list[str]) -> None:
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+def split(bytes, number):
+    l = []
+    s = ""
+    i = 0
+    m = 0
+    for b in bytes:
+        s += b
+        i += 1
+        m += 1
+        if i == number:
+            l.append(s)
+            s = ""
+            i = 0
+        if m == len(bytes):
+            if(len(s) < number):
+                s = s.ljust(number, "0")
+            l.append(s)
+    return l
 
 def rotate(arr: list[str]) -> list[str]:
     """Rotate a 2D array 90 degrees clockwise"""
@@ -98,9 +117,39 @@ def generate_key(arr: list[str]) -> dict[str, str]:
     }
 
 
-def check(arr: list[str]) -> bool:
+def check(decoded: str, arr: list[str]) -> bool:
     """Returns if the checksums and hashes match a normalised grid"""
-    data = "".join([row[2:-2] for row in arr[2:-2]])
+    # Hash using the correct algorithm
+    if arr[0][-2] == "0":
+        hasher = xxh.xxh64()
+        hasher.update(decoded)
+        hash_bytes = hasher.digest()
+        hash_bytes = b64.b64encode(hash_bytes)
+    hash_bytes = "".join([bin(n)[2:].zfill(8) for n in hash_bytes])
+    # Convert to 3bit strings (one for each pixel)
+    hash_bytes = split(hash_bytes, 3)
+    size = (len(arr[0]), len(arr))
+    # Add extra 0s if needed
+    if len(hash_bytes) < 2 * (size[0] + size[1]):
+        hash_bytes += ["0" * 3] * (size[0] + size[1] - len(hash_bytes))
+    # Find the limit of pixels on the right
+    cutoff = (2 * size[0]) - 2
+    for pixel_index in range(len(hash_bytes)):
+        if pixel_index < cutoff:
+            # The pixel should be on the right
+            x = size[0] + 2 + (pixel_index % 2)
+            y = 2 + (pixel_index // 2)
+        else:
+            # The pixel should be on the bottom
+            x = (pixel_index - cutoff) % size[0] + 2
+            y = size[1] + 2 + (pixel_index - cutoff) // size[0]
+        # Check if the pixel is out of bounds
+        if x >= size[0] or y >= size[1]:
+            break
+        # Instead of setting the pixel, we check if it matches the hash
+        if arr[y][x] != int(hash_bytes[pixel_index], 2):
+            return False
+    return True
 
 
 def decode(arr: list[str]) -> str:
@@ -109,8 +158,6 @@ def decode(arr: list[str]) -> str:
     # Replace each value in the grid with the corresponding value in the key
     arr = ["".join([key[i] for i in row]) for row in arr]
 
-    # We need to check that all the checksums and hashes match
-    is_valid = check(arr)
 
     # The data is the whole grid, except 2 pixels on each side
     data = "".join([row[2:-2] for row in arr[2:-2]])
@@ -119,20 +166,27 @@ def decode(arr: list[str]) -> str:
 
     # Convert this to a byte string
     data = bytes([int(data[i:i+8], 2) for i in range(0, len(data), 8)])
-    # # The original string was put through UTF-8 encoding, then base64. We need to reverse this
-    return b64.b64decode(data).decode("utf8")
+
+    # The original string was put through UTF-8 encoding, then base64. We need to reverse this
+    text = b64.b64decode(data).decode("utf8")
+
+    # We need to check that all the checksums and hashes match
+    is_valid = check(text, arr)
+    print("Valid:", is_valid)
+
+    return text
 
 def main():
-    test_string =   "0133407322263401 3234353465244540 2431043550340635 3415712047014306 0436241150222441 0634613546155551 7425263531144334 7545643064357062 6434054462214301 0501322565054751 3531043526364634 1421032126351762 2432265475000001 0141100665573467 5446244030667554"
+    test_string = input("> ")
     test_string = test_string.split()
-    k = {0: "B", 1: "$", 2: "=", 3: "/", 4: "F", 5: "!", 6: "V", 7: "@"}
-    for n in range(len(test_string)):
-        test_string[n] = "".join([k[int(i)] for i in test_string[n]])
-    string = rotate(test_string)
+    # k = {0: "B", 1: "$", 2: "=", 3: "/", 4: "F", 5: "!", 6: "V", 7: "@"}
+    # for n in range(len(test_string)):
+    #     test_string[n] = "".join([k[int(i)] for i in test_string[n]])
+    # string = rotate(test_string)
 
-    print("".join(string))
-    decoded = decode(string)
-    print(decoded)
+    print("Encoded:", "".join(test_string))
+    decoded = decode(test_string)
+    print("Decoded:", decoded)
 
 if __name__ == "__main__":
     main()
