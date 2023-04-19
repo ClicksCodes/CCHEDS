@@ -22,6 +22,34 @@ def render(arr: list[str]) -> None:
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+
+def find_code() -> str:
+    # Load DecodeTest.jpg to a cv2 image
+    img = cv2.imread("DecodeTest.jpg")
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # Resize to 1000 by 1000
+    img = cv2.resize(img, (600, 800))
+    img = cv2.GaussianBlur(img, (5, 5), 0)
+    lab= cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    l_channel, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    cl = clahe.apply(l_channel)
+    limg = cv2.merge((cl,a,b))
+    enhanced_img = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+    edges = cv2.Canny(enhanced_img, 150, 200)
+    # img = cv2.adaptiveThreshold(img, 255, 1, 1, 11, 2)
+    (r,g,b) = cv2.split(img)
+    grey = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    cv2.imshow("img", img)
+    # cv2.imshow("r", r)
+    # cv2.imshow("g", g)
+    # cv2.imshow("b", b)
+    cv2.imshow("grey", grey)
+    cv2.imshow("Edges", edges)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
 def split(bytes, number):
     l = []
     s = ""
@@ -44,7 +72,6 @@ def split(bytes, number):
 def rotate(arr: list[str]) -> list[str]:
     """Rotate a 2D array 90 degrees clockwise"""
     return ["".join(row) for row in zip(*arr[::-1])]
-
 
 def flip_horizontal(arr: list[str]) -> list[str]:
     """Flip a 2D array horizontally"""
@@ -151,7 +178,7 @@ def check(decoded: str, arr: list[str]) -> bool:
             return False
     return True
 
-
+    cv2.QRCodeDetector
 def decode(arr: list[str]) -> str:
     arr = normalize_rotation(arr)
     key = generate_key(arr)
@@ -177,16 +204,19 @@ def decode(arr: list[str]) -> str:
     return text
 
 def main():
-    test_string = input("> ")
-    test_string = test_string.split()
-    # k = {0: "B", 1: "$", 2: "=", 3: "/", 4: "F", 5: "!", 6: "V", 7: "@"}
-    # for n in range(len(test_string)):
-    #     test_string[n] = "".join([k[int(i)] for i in test_string[n]])
-    # string = rotate(test_string)
-
-    print("Encoded:", "".join(test_string))
-    decoded = decode(test_string)
+    # text = "014102325201 322324221340 732544352615 533646210706 133307253215 723624112431 023104411236 133406115546 623063640075 017024661467 546535071454"
+    text = ""
+    if not text:
+        action = input("[T]ext or [F]ile: ")
+        if action.lower() == "f":
+            text = bytes(open(input("Filename: ")).read(), "utf-8")
+        else:
+            text = bytes(input("Text: "), "utf-8")
+    text = text.split()
+    print("Encoded:", "".join(text))
+    decoded = decode(text)
     print("Decoded:", decoded)
 
 if __name__ == "__main__":
-    main()
+    find_code()
+    # main()

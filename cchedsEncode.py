@@ -1,13 +1,11 @@
 import base64 as b64
 import os
-import time
 from math import ceil
 import cv2
 import numpy as np
 from PIL import Image
 
 import xxhash as xxh
-from PIL import Image
 
 VERSION=1
 
@@ -193,10 +191,11 @@ class CCHEDS:
 if __name__ == "__main__":
     c = CCHEDS()
     c.set_text()
-    action = input("[V]iew, Output [T]ext, [S]ave: ")
-    if "t" in action.lower():
+    action = input("[V]iew, Output [T]ext, [S]ave, [A]ll: ")
+    run_all = "a" in action.lower()
+    if "t" in action.lower() or run_all:
         print(c.stored_data)
-    if "s" in action.lower():
+    if "s" in action.lower() or run_all:
         c.save(input("Filename: "))
-    if "v" in action.lower():
+    if "v" in action.lower() or run_all:
         c.show(True)
